@@ -6,35 +6,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Setup NDK
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r25b
+
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Patch APK
+
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r25b
+
+      - name: Download and Prepare Files
+        run: |
+          wget -O asset_pack.apk "https://github.com/NokerV1/ff---mod/releases/download/v1.0/asset_pack_install_time.apk"
+          mv config.arm64_v8a.apk split.apk
+          mv com.dts.freefireth.apk stub.apk
+
+      - name: Merge Splits
+        run: |
+          wget https://github.com/REAndroid/APKEditor/releases/download/v1.3.9/APKEditor-1.3.9.jar
+          java -jar APKEditor-1.3.9.jar m -i asset_pack.apk -i stub.apk -i split.apk -o merged.apk
+
+      - name: Patch and Sign
         run: |
           sudo apt-get update
-          sudo apt-get install -y apktool zipalign apksigner wget unzip
-          # FILL: Replace with a direct link to the Free Fire APK
-          wget -O base.apk "https://example.com/freefire.apk" 
+          sudo apt-get install -y apktool zipalign apksigner
           
-          apktool d base.apk -o out
+          apktool d merged.apk -o out
           mkdir -p out/lib/arm64-v8a
           
-          # FILL: You need to upload libmod.so to your repo
-          # This step copies it into the decompiled APK
-          # cp libs/arm64-v8a/libmod.so out/lib/arm64-v8a/
+          # FILL: Uncomment when libmod.so is in the repo
+          # cp libmod.so out/lib/arm64-v8a/
           
           apktool b out -o modded.apk
-      - name: Sign APK
-        run: |
+          
           keytool -genkey -v -keystore key.jks -storepass 123456 -alias key -keypass 123456 -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           zipalign -v 4 modded.apk aligned.apk
           apksigner sign --ks key.jks --ks-pass pass:123456 --out signed.apk aligned.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
