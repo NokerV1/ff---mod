@@ -34,11 +34,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y apktool zipalign apksigner
           
+          # Compile the C++ mod
+          $ANDROID_NDK_HOME/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk
+          
           apktool d merged.apk -o out
           mkdir -p out/lib/arm64-v8a
           
-          # FILL: Uncomment when libmod.so is in the repo
-          # cp libmod.so out/lib/arm64-v8a/
+          # Copy the compiled library into the APK
+          cp libs/arm64-v8a/libmod.so out/lib/arm64-v8a/
+          
+          # FILL: Patch smali to load libmod.so
           
           apktool b out -o modded.apk
           
