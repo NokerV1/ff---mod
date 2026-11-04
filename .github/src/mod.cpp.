@@ -1,0 +1,32 @@
+#include <jni.h>
+#include <GLES2/gl2.h>
+#include <dlfcn.h>
+#include <android/log.h>
+#include <pthread.h>
+
+#define LOG_TAG "FF_Mod"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+
+typedef void (*glDrawElements_t)(GLenum mode, GLsizei count, GLenum type, const void* indices);
+glDrawElements_t orig_glDrawElements;
+
+void hook_glDrawElements(GLenum mode, GLsizei count, GLenum type, const void* indices) {
+    orig_glDrawElements(mode, count, type, indices);
+    // FILL: ESP logic here
+}
+
+void* main_thread(void* arg) {
+    LOGI("Mod loaded!");
+    void* handle = dlopen("libGLESv2.so", RTLD_LAZY);
+    if (handle) {
+        orig_glDrawElements = (glDrawElements_t)dlsym(handle, "glDrawElements");
+        // DobbyHook((void*)orig_glDrawElements, (void*)hook_glDrawElements, (void**)&orig_glDrawElements);
+    }
+    return nullptr;
+}
+
+__attribute__((constructor))
+void init() {
+    pthread_t thread;
+    pthread_create(&thread, nullptr, main_thread, nullptr);
+}
